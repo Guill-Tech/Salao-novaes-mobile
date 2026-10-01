@@ -14,7 +14,16 @@ Desenvolver uma solução mobile que permita aos clientes consultar os serviços
 * Expo
 * JavaScript
 * Figma
+* Firebase
 * Git e GitHub
+
+## Protótipo (Figma)
+
+O design das telas do aplicativo está disponível no Figma:
+
+[Abrir protótipo](https://www.figma.com/design/RgfcFYyYEMnzybNPQ4Ix40/BarbeariaProject)
+
+Mais detalhes em [docs/figma.md](docs/figma.md).
 
 ## Planejamento
 
