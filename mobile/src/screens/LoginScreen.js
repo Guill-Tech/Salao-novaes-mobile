@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   View,
   Text,
+  Image,
   Pressable,
   Alert,
   StyleSheet,
@@ -42,11 +43,12 @@ export default function LoginScreen({ onCadastro, onLoginBarbeiro }) {
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Troque este círculo pela logo: exporte do Figma como PNG, salve
-            em assets/logo.png e use <Image source={require(...)} /> */}
-        <View style={styles.logo}>
-          <Text style={styles.logoText}>BARBEARIA</Text>
-        </View>
+    
+        <Image 
+          source={require("../../assets/images/LOGO.png")} 
+          style={styles.logo}
+          resizeMode="contain"
+        />
 
         <View style={styles.form}>
           <Input
@@ -90,19 +92,9 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   logo: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.xl,
-  },
-  logoText: {
-    fontFamily: fonts.serif,
-    fontSize: 14,
-    color: colors.textDark,
-    fontWeight: 'bold',
+    width: 140,
+    height: 140,
+    marginbottom: spacing.x1,
   },
   form: { width: '100%', alignItems: 'center', marginBottom: spacing.xl },
   entrar: { marginTop: spacing.md },
