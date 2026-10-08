@@ -1,5 +1,5 @@
-import LoginScreen from '../screens/LoginScreen';
+import CadastroScreen from '../screens/CadastroScreen';
 
 export default function Index() {
-  return <LoginScreen />;
+  return <CadastroScreen />;
 }

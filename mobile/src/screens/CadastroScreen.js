@@ -1,40 +1,40 @@
 import { useState } from 'react';
 import {
-  View,
-  Text,
-  Image,
-  Pressable,
-  Alert,
-  StyleSheet,
-  KeyboardAvoidingView,
-  ScrollView,
-  Platform,
+    View,
+    Text,
+    Image,
+    StyleSheet,
 } from 'react-native';
 import Button from '../components/Button';
 import Input from '../components/Input';
 import { colors, fonts, spacing } from '../theme';
 
-// onCadastro e onLoginBarbeiro serão ligados à navegação depois.
-export default function LoginScreen({
-  onCadastro = () => {},
-  onLoginBarbeiro = () => {},
-}) {
+// onAvancar será ligado à navegação depois.
+export default function CadastroScreen({ onAvancar = () => {} }) {
+  const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
+  const [numero, setNumero] = useState('');
   const [senha, setSenha] = useState('');
   const [erros, setErros] = useState({});
 
   function validar() {
     const novos = {};
+    if (!nome.trim()) novos.nome = 'Informe seu nome';
     if (!email.includes('@')) novos.email = 'Digite um e-mail válido';
+    // conta só os dígitos, ignorando parênteses, espaços e hífen
+    if (numero.replace(/\D/g, '').length < 10) {
+      novos.numero = 'Digite um número com DDD';
+    }
     if (senha.length < 6) novos.senha = 'A senha deve ter ao menos 6 caracteres';
     setErros(novos);
     return Object.keys(novos).length === 0;
   }
 
-  function entrar() {
+  function avancar() {
     if (!validar()) return;
-    // Login simulado. Na Sprint 2 isso vira Firebase Auth.
-    Alert.alert('Login simulado', `Bem-vindo, ${email}`);
+    // Cadastro simulado. Na Sprint 2 isso vira Firebase Auth + Firestore.
+    Alert.alert('Cadastro simulado', `Conta criada para ${nome}`);
+    if (onAvancar) onAvancar({ nome, email, numero });
   }
 
   return (
@@ -46,14 +46,22 @@ export default function LoginScreen({
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
       >
-    
-        <Image 
-          source={require("../../assets/images/LOGO.png")} 
+        <Image
+          source={require('../../assets/images/LOGO.png')}
           style={styles.logo}
           resizeMode="contain"
         />
 
+        <Text style={styles.aviso}>*Preencha todos os campos</Text>
+
         <View style={styles.form}>
+          <Input
+            label="Nome :"
+            value={nome}
+            onChangeText={setNome}
+            autoCapitalize="words"
+            error={erros.nome}
+          />
           <Input
             label="E-mail :"
             value={email}
@@ -62,25 +70,22 @@ export default function LoginScreen({
             error={erros.email}
           />
           <Input
+            label="Número :"
+            value={numero}
+            onChangeText={setNumero}
+            keyboardType="phone-pad"
+            error={erros.numero}
+          />
+          <Input
             label="Senha :"
             value={senha}
             onChangeText={setSenha}
             secureTextEntry
             error={erros.senha}
           />
-
-          <Button title="Entrar" onPress={entrar} style={styles.entrar} />
-
-          <Pressable onPress={onCadastro}>
-            <Text style={styles.link}>Cadastre-se aqui</Text>
-          </Pressable>
         </View>
 
-        <Button
-          title="Login do Barbeiro"
-          variant="outline"
-          onPress={onLoginBarbeiro}
-        />
+        <Button title="Avançar" onPress={avancar} />
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -94,17 +99,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: spacing.lg,
   },
-  logo: {
-    width: 140,
-    height: 140,
-    marginbottom: spacing.x1,
-  },
-  form: { width: '100%', alignItems: 'center', marginBottom: spacing.xl },
-  entrar: { marginTop: spacing.md },
-  link: {
-    color: '#6EA8FF',
+  logo: { width: 120, height: 120, marginBottom: spacing.md },
+  aviso: {
+    color: colors.text,
+    fontFamily: fonts.serif,
     fontSize: 13,
-    textDecorationLine: 'underline',
-    marginTop: spacing.md,
+    marginBottom: spacing.md,
   },
+  form: { width: '100%', marginBottom: spacing.lg },
 });
