@@ -37,8 +37,8 @@ Inicialmente será utilizada a interface desenvolvida no Figma como referência 
 O andamento das tarefas é acompanhado em um quadro Kanban no Trello:
 [Projeto Mobile - Sistema de Agendamento](https://trello.com/b/PsPXl9JT/projeto-mobile-sistema-de-agendamento)
 
-Colunas do quadro: Backlog do projeto, Sprint atual, Em andamento,
-Validação e Concluído.
+Colunas do quadro: Backlog do projeto, Sprint atual, Em andamento
+e Concluído.
 
 Fluxo de branches no GitHub: `main` (versão estável), `develop`
 (integração) e uma branch para cada tarefa, juntada por Pull Request.
