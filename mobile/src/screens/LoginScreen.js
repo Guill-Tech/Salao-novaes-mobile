@@ -18,6 +18,7 @@ import { colors, fonts, spacing } from '../theme';
 export default function LoginScreen({
   onCadastro = () => {},
   onLoginBarbeiro = () => {},
+  onEntrar = () => {},
 }) {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
@@ -34,7 +35,9 @@ export default function LoginScreen({
   function entrar() {
     if (!validar()) return;
     // Login simulado. Na Sprint 2 isso vira Firebase Auth.
-    Alert.alert('Login simulado', `Bem-vindo, ${email}`);
+    Alert.alert('Login simulado', `Bem-vindo, ${email}` , [
+      { text: 'OK', onPress: onEntrar } ,
+    ]);
   }
 
   return (

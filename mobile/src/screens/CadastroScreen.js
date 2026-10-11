@@ -37,8 +37,9 @@ export default function CadastroScreen({ onAvancar = () => {} }) {
   function avancar() {
     if (!validar()) return;
     // Cadastro simulado. Na Sprint 2 isso vira Firebase Auth + Firestore.
-    Alert.alert('Cadastro simulado', `Conta criada para ${nome}`);
-    if (onAvancar) onAvancar({ nome, email, numero });
+    Alert.alert('Cadastro simulado', `Conta criada para ${nome}`, [
+      { text: 'OK', onPress: () => onAvancar({ nome, email, numero }) },
+    ]);
   }
 
   return (

@@ -1,5 +1,13 @@
+import { useRouter } from 'expo-router';
 import LoginScreen from '../screens/LoginScreen';
 
 export default function Index() {
-  return <LoginScreen />;
+  const router = useRouter();
+
+  return (
+    <LoginScreen
+      onCadastro={() => router.push('/cadastro')}
+      onEntrar={() => router.replace('/inicial')}
+    />
+  );
 }
