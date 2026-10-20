@@ -12,14 +12,36 @@ import {
 import Button from '../components/Button';
 import Input from '../components/Input';
 import { colors, fonts, spacing } from '../theme';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { auth, db } from '../services/firebase';
 
-// onAvancar será ligado à navegação depois.
+function mensagemDeErro(codigo) {
+  switch (codigo) {
+    case 'auth/email-already-in-use':
+      return 'Este e-mail já está cadastrado.';
+    case 'auth/invalid-email':
+      return 'E-mail inválido.';
+    case 'auth/weak-password':
+      return 'Senha muito fraca. Use ao menos 6 caracteres.';
+    case 'auth/network-request-failed':
+      return 'Sem conexão com a internet. Tente novamente.';
+    case 'auth/operation-not-allowed':
+      return 'O cadastro por e-mail ainda não está ativado no Firebase.';
+    case 'permission-denied':
+      return 'Sem permissão para salvar os dados. Avise a equipe.';
+    default:
+      return 'Ocorreu um erro. Tente novamente.';
+  }
+}
+
 export default function CadastroScreen({ onAvancar = () => {} }) {
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [numero, setNumero] = useState('');
   const [senha, setSenha] = useState('');
   const [erros, setErros] = useState({});
+  const [carregando, setCarregando] = useState(false);
 
   function validar() {
     const novos = {};
@@ -34,13 +56,35 @@ export default function CadastroScreen({ onAvancar = () => {} }) {
     return Object.keys(novos).length === 0;
   }
 
-  function avancar() {
-    if (!validar()) return;
-    // Cadastro simulado. Na Sprint 2 isso vira Firebase Auth + Firestore.
-    Alert.alert('Cadastro simulado', `Conta criada para ${nome}`, [
+  async function avancar() {
+  if (carregando) return;
+  if (!validar()) return;
+
+  setCarregando(true);
+  try {
+    const credencial = await createUserWithEmailAndPassword(
+      auth,
+      email.trim(),
+      senha
+    );
+
+    await setDoc(doc(db, 'users', credencial.user.uid), {
+      nome: nome.trim(),
+      email: email.trim(),
+      telefone: numero,
+      tipo: 'cliente',
+      criadoEm: serverTimestamp(),
+    });
+
+    Alert.alert('Cadastro realizado', `Bem-vindo, ${nome.trim()}!`, [
       { text: 'OK', onPress: () => onAvancar({ nome, email, numero }) },
     ]);
+  } catch (erro) {
+    Alert.alert('Não foi possível cadastrar', mensagemDeErro(erro.code));
+  } finally {
+    setCarregando(false);
   }
+}
 
   return (
     <KeyboardAvoidingView
@@ -90,7 +134,7 @@ export default function CadastroScreen({ onAvancar = () => {} }) {
           />
         </View>
 
-        <Button title="Avançar" onPress={avancar} />
+        <Button title={carregando ? 'Aguarde...' : ' Avançar'} onPress={avancar} />
       </ScrollView>
     </KeyboardAvoidingView>
   );
