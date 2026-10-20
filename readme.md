@@ -32,11 +32,22 @@ O desenvolvimento do aplicativo será realizado de forma progressiva ao longo da
 
 Inicialmente será utilizada a interface desenvolvida no Figma como referência para a implementação do aplicativo.
 
+## Gestão do projeto
+
+O andamento das tarefas é acompanhado em um quadro Kanban no Trello:
+[Projeto Mobile - Sistema de Agendamento](https://trello.com/b/PsPXl9JT/projeto-mobile-sistema-de-agendamento)
+
+Colunas do quadro: Backlog do projeto, Sprint atual, Em andamento
+e Concluído.
+
+Fluxo de branches no GitHub: `main` (versão estável), `develop`
+(integração) e uma branch para cada tarefa, juntada por Pull Request.
+
 ## Arquitetura
 
 O aplicativo é desenvolvido em React Native com Expo, que roda sobre o
 Node.js. O backend utiliza o Firebase (Authentication para login e
-cadastro, e Firestore para serviços, profissionais e agendamentos),
+cadastro, e Firestore para serviços e agendamentos),
 dispensando um servidor próprio nesta etapa.
 
 ## Versionamento
