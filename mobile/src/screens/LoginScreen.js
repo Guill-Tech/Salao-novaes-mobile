@@ -15,11 +15,7 @@ import Input from '../components/Input';
 import { colors, fonts, spacing } from '../theme';
 
 // onCadastro e onLoginBarbeiro serão ligados à navegação depois.
-export default function LoginScreen({
-  onCadastro = () => {},
-  onLoginBarbeiro = () => {},
-  onEntrar = () => {},
-}) {
+export default function LoginScreen({ onCadastro, onLoginBarbeiro }) {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [erros, setErros] = useState({});
@@ -35,9 +31,7 @@ export default function LoginScreen({
   function entrar() {
     if (!validar()) return;
     // Login simulado. Na Sprint 2 isso vira Firebase Auth.
-    Alert.alert('Login simulado', `Bem-vindo, ${email}` , [
-      { text: 'OK', onPress: onEntrar } ,
-    ]);
+    Alert.alert('Login simulado', `Bem-vindo, ${email}`);
   }
 
   return (
