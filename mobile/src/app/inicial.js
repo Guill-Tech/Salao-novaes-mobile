@@ -1,5 +1,10 @@
-import InicialScreen from '../screens/InicialScreen';
 
+import { useRouter } from 'expo-router';
+import InicialScreen from '../screens/InicialScreen';
+ 
 export default function Inicial() {
-  return <InicialScreen />;
+  const router = useRouter();
+ 
+  return <InicialScreen onEscolherServico={() => router.push('/servicos')} />;
 }
+ 
