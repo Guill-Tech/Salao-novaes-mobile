@@ -3,6 +3,7 @@ import {
   View,
   Text,
   Image,
+  ImageBackground,
   ScrollView,
   Pressable,
   ActivityIndicator,
@@ -60,6 +61,11 @@ export default function ServicosScreen({ onConfirmar = () => {} }) {
   return (
     <View style={styles.container}>
       <View style={styles.topo}>
+        <ImageBackground
+          source={require('../../assets/images/backgroundbarbeiro.png')}
+          style={styles.topo}
+          resizeMode="cover"
+        />
         <Image
           source={require('../../assets/images/LOGO.png')}
           style={styles.logo}
