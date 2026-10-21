@@ -4,5 +4,10 @@ import LoginBarbeiroScreen from '../screens/LoginBarbeiroScreen';
 export default function LoginBarbeiro() {
   const router = useRouter();
 
-  return <LoginBarbeiroScreen onAvancar={() => router.push('/login-barbeiro')} />;
+  return (
+    <LoginBarbeiroScreen
+      onEntrar={() => router.push('/painel-barbeiro')}
+      onCadastro={() => router.push('/cadastro')}
+    />
+  );
 }
