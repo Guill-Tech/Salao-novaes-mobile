@@ -60,18 +60,19 @@ export default function ServicosScreen({ onConfirmar = () => {} }) {
  
   return (
     <View style={styles.container}>
-      <View style={styles.topo}>
         <ImageBackground
           source={require('../../assets/images/backgroundbarbeiro.png')}
           style={styles.topo}
           resizeMode="cover"
-        />
-        <Image
-          source={require('../../assets/images/LOGO.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-      </View>
+        >
+          <View style={styles.escurecer} />
+        
+          <Image
+            source={require('../../assets/images/LOGO.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </ImageBackground>
  
       <View style={styles.conteudo}>
         <Text style={styles.titulo}>Serviços :</Text>
@@ -115,15 +116,20 @@ export default function ServicosScreen({ onConfirmar = () => {} }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.surface },
   topo: {
-    height: 170,
-    backgroundColor: '#2B1A1A',
+    height: 250,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+  escurecer: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.35)',
   },
   logo: {
     position: 'absolute',
     top: 48,
     right: spacing.md,
-    width: 90,
-    height: 90,
+    width: 100,
+    height: 100,
   },
   conteudo: {
     flex: 1,
