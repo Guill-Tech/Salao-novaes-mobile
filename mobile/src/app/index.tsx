@@ -8,6 +8,7 @@ export default function Index() {
     <LoginScreen
       onCadastro={() => router.push('/cadastro')}
       onEntrar={() => router.replace('/inicial')}
+      onLoginBarbeiro={() => router.push('/login-barbeiro')}
     />
   );
 }
