@@ -10,8 +10,8 @@ export default function Servicos() {
         router.push({
           pathname: '/data-horario',
           params: {
-            servicoNome: servico.nome,
-            servicoPreco: String(servico.preco),
+            serviceId: servico.id,
+            nome: servico.nome
           },
         })
       }
