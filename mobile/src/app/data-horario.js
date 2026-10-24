@@ -4,19 +4,16 @@ import SelecionarDataHoraScreen from '../screens/SelecionarDataHoraScreen';
 
 export default function DataHorario() {
   const router = useRouter();
-  // Serviço escolhido na tela anterior (opcional)
-  const { servicoNome } = useLocalSearchParams();
+  const { serviceId, nome } = useLocalSearchParams();
 
   return (
     <SelecionarDataHoraScreen
+      servico={{ id: serviceId, nome }}
       onVoltar={() => router.back()}
-      onAgendar={({ dataTexto, hora }) =>
-        // Por enquanto só mostra o resumo. A gravação no Firestore e a tela de
-        // confirmação ficam para a Sprint 3.
-        Alert.alert(
-          'Horário escolhido',
-          `${servicoNome ? servicoNome + '\n' : ''}${dataTexto} às ${hora}`
-        )
+      onAgendado={({ dataTexto, hora }) =>
+        Alert.alert('Agendamento confirmado', `${nome}\n${dataTexto} às ${hora}`, [
+          { text: 'OK', onPress: () => router.replace('/inicial') },
+        ])
       }
     />
   );
