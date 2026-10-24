@@ -13,6 +13,7 @@ import {
 import Button from '../components/Button';
 import Input from '../components/Input';
 import { colors, fonts, spacing } from '../theme';
+import { entrarNoApp, mensagemDeErroLogin } from '../services/autenticacao';
 
 // onCadastro e onLoginBarbeiro serão ligados à navegação depois.
 export default function LoginScreen({
@@ -23,6 +24,7 @@ export default function LoginScreen({
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [erros, setErros] = useState({});
+  const [carregando, setCarregando] = useState(false);
 
   function validar() {
     const novos = {};
@@ -32,12 +34,19 @@ export default function LoginScreen({
     return Object.keys(novos).length === 0;
   }
 
-  function entrar() {
-    if (!validar()) return;
-    // Login simulado. Na Sprint 2 isso vira Firebase Auth.
-    Alert.alert('Login simulado', `Bem-vindo, ${email}` , [
-      { text: 'OK', onPress: onEntrar } ,
-    ]);
+  async function entrar() {
+    if(carregando) return;
+    setCarregando(true);
+
+    setCarregando(true);
+    try {
+      const perfil = await entrarNoApp(email, senha);
+      onEntrar(perfil);
+    } catch (erro) {
+      Alert.alert('Não foi possivel entrar', mensagemDeErroLogin(erro.code));
+    } finally {
+      setCarregando(false);
+    }
   }
 
   return (
@@ -72,8 +81,7 @@ export default function LoginScreen({
             error={erros.senha}
           />
 
-          <Button title="Entrar" onPress={entrar} style={styles.entrar} />
-
+          <Button title={carregando ? 'Aguarde...' : 'Entrar'} onPress={entrar} style={styles.entrar} />
           <Pressable onPress={onCadastro}>
             <Text style={styles.link}>Cadastre-se aqui</Text>
           </Pressable>
