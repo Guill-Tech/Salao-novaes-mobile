@@ -35,19 +35,29 @@ export default function LoginScreen({
   }
 
   async function entrar() {
-    if(carregando) return;
-    setCarregando(true);
+  if (carregando) return;
 
-    setCarregando(true);
-    try {
-      const perfil = await entrarNoApp(email, senha);
-      onEntrar(perfil);
-    } catch (erro) {
-      Alert.alert('Não foi possivel entrar', mensagemDeErroLogin(erro.code));
-    } finally {
-      setCarregando(false);
-    }
+  if (!validar()) return;
+
+  setCarregando(true);
+
+  try {
+    const perfil = await entrarNoApp(email.trim(), senha);
+    onEntrar(perfil);
+  } catch (erro) {
+    console.error('Erro detalhado no login:', erro);
+    console.error('Código do erro:', erro?.code);
+    console.error('Mensagem do erro:', erro?.message);
+
+    Alert.alert(
+      'Não foi possível entrar',
+      mensagemDeErroLogin(erro?.code) ||
+        'Ocorreu um erro inesperado. Consulte o terminal para ver os detalhes.'
+    );
+  } finally {
+    setCarregando(false);
   }
+}
 
   return (
     <KeyboardAvoidingView
