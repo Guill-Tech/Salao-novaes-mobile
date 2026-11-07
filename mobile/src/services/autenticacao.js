@@ -2,8 +2,14 @@ import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
 
+// Marca se o usuário saiu apertando "Sair" (e não porque a sessão caiu).
+let saidaVoluntaria = false;
+export function saiuPorConta() {
+  return saidaVoluntaria;
+}
 export async function entrarNoApp(email, senha) {
   try {
+        saidaVoluntaria = false;
     console.log('1. Iniciando autenticação...');
 
     // 1. Autenticar no Firebase Authentication
@@ -59,6 +65,7 @@ export async function entrarNoApp(email, senha) {
 // SAIR DO APLICATIVO
 export async function sair() {
   try {
+        saidaVoluntaria = true;
     await signOut(auth);
     console.log('Usuário desconectado.');
   } catch (erro) {
