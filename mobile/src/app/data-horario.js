@@ -1,23 +1,27 @@
 import { Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import SelecionarDataHoraScreen from '../screens/SelecionarDataHoraScreen';
+import { criarAgendamento, mensagemDeErro } from '../services/agendamento';
 
 export default function DataHorario() {
   const router = useRouter();
-  // Serviço escolhido na tela anterior (opcional)
-  const { servicoNome } = useLocalSearchParams();
+  const { servicoId, servicoNome } = useLocalSearchParams();
 
-  return (
-    <SelecionarDataHoraScreen
-      onVoltar={() => router.back()}
-      onAgendar={({ dataTexto, hora }) =>
-        // Por enquanto só mostra o resumo. A gravação no Firestore e a tela de
-        // confirmação ficam para a Sprint 3.
-        Alert.alert(
-          'Horário escolhido',
-          `${servicoNome ? servicoNome + '\n' : ''}${dataTexto} às ${hora}`
-        )
-      }
-    />
-  );
+  const agendar = async ({ data, dataTexto, hora }) => {
+    try {
+      await criarAgendamento({
+        data,
+        hora,
+        serviceId: servicoId,
+        serviceNome: servicoNome,
+      });
+      Alert.alert('Agendamento confirmado', `${servicoNome}\n${dataTexto} às ${hora}`);
+    } catch (erro) {
+      console.log('ERRO AGENDAR:', erro.code, erro.message);
+      const msg = mensagemDeErro(erro);
+      Alert.alert(msg.titulo, msg.texto);
+    }
+  };
+
+  return <SelecionarDataHoraScreen onVoltar={() => router.back()} onAgendar={agendar} />;
 }

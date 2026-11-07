@@ -4,6 +4,7 @@ import ServicosScreen from '../screens/ServicosScreen';
 export default function Servicos() {
   const router = useRouter();
 
+  
   return (
     <ServicosScreen
       onConfirmar={(servico) =>
@@ -12,7 +13,12 @@ export default function Servicos() {
           params: {
             servicoNome: servico.nome,
             servicoPreco: String(servico.preco),
-          },
+          
+            params: {
+          servicoId: servico.id,        
+          servicoNome: servico.nome,
+          servicoPreco: String(servico.preco),
+},},
         })
       }
     />
