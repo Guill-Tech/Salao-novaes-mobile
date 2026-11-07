@@ -10,7 +10,11 @@ export default function Confirmacao() {
       servico={servico}
       dataTexto={dataTexto}
       hora={hora}
-      onInicio={() => router.replace('/inicial')}
+            onInicio={() => {
+        // Limpa a pilha (inicial, servicos, confirmacao) antes de ir para a tela inicial.
+        if (router.canDismiss()) router.dismissAll();
+        router.replace('/inicial');
+      }}
     />
   );
 }
