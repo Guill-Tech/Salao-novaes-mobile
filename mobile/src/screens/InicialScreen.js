@@ -6,6 +6,7 @@ import {
   ScrollView,
   Pressable,
   StyleSheet,
+  TouchableOpacity,
 } from 'react-native';
 import Button from '../components/Button';
 import { colors, fonts, spacing, radius } from '../theme';
@@ -18,6 +19,8 @@ const AGENDAMENTOS_EXEMPLO = [
 
 export default function InicialScreen({
   nomeCliente = 'Cliente',
+  agendamentos = AGENDAMENTOS_EXEMPLO,
+  onCancelar = () => {},
   onEscolherServico = () => {},
   onSair = () => {},
 }) {
@@ -28,7 +31,7 @@ export default function InicialScreen({
         style={styles.topo}
         resizeMode="cover"
       >
-        {/* camada escura por cima da foto, para o texto branco ficar legível */}
+        
         <View style={styles.escurecer} />
 
         <Text style={styles.saudacao}>{`Olá,\n“${nomeCliente}”!`}</Text>
@@ -44,15 +47,22 @@ export default function InicialScreen({
         <Text style={styles.titulo}>Agendamentos :</Text>
 
         <ScrollView style={styles.lista} showsVerticalScrollIndicator={false}>
-          {AGENDAMENTOS_EXEMPLO.length === 0 ? (
+          {agendamentos.length === 0 ? (
             <Text style={styles.vazio}>Nenhum agendamento ainda</Text>
           ) : (
-            AGENDAMENTOS_EXEMPLO.map((item) => (
+            agendamentos.map((item) => (
               <View key={item.id} style={styles.cartao}>
                 <Text style={styles.cartaoTitulo}>{item.servico}</Text>
                 <Text style={styles.cartaoTexto}>
                   {item.data} às {item.hora}
                 </Text>
+{item.podeCancelar ? (
+  <TouchableOpacity style={styles.botaoCancelar} onPress={() => onCancelar(item.id)}>
+    <Text style={styles.botaoCancelarTexto}>Cancelar</Text>
+  </TouchableOpacity>
+) : (
+  <Text style={styles.avisoCancelar}>Cancelamento só até 24 h antes</Text>
+)}
               </View>
             ))
           )}
@@ -141,9 +151,15 @@ const styles = StyleSheet.create({
     borderWidth: 5,
     marginTop: spacing.md,
   },
-  sair: {
-    color: colors.textDark,
-    textDecorationLine: 'underline',
-    marginTop: spacing.md,
-  },
+  botaoCancelar: {
+  alignSelf: 'flex-start',
+  marginTop: 8,
+  paddingVertical: 4,
+  paddingHorizontal: 12,
+  borderRadius: 14,
+  borderWidth: 1,
+  borderColor: '#C0392B',
+},
+botaoCancelarTexto: { color: '#C0392B', fontSize: 12 },
+avisoCancelar: { marginTop: 8, fontSize: 11, color: '#888888' },
 });

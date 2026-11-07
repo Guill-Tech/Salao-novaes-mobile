@@ -10,6 +10,9 @@ import {
   Platform,
 } from 'react-native';
 import { cores } from '../theme/barbeiro';
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../services/firebase';
 
 // Props de navegação: onEntrar (vai ao painel) e onCadastro (vai ao cadastro)
 export default function LoginBarbeiroScreen({ onEntrar, onCadastro }) {
@@ -17,8 +20,9 @@ export default function LoginBarbeiroScreen({ onEntrar, onCadastro }) {
   const [senha, setSenha] = useState('');
   const [erroEmail, setErroEmail] = useState('');
   const [erroSenha, setErroSenha] = useState('');
-
-  const handleEntrar = () => {
+  const [carregando, setCarregando] = useState(false);
+  const [erroGeral, setErroGeral] = useState('');
+  const handleEntrar = async () => {
     let valido = true;
 
     if (!email.trim()) {
@@ -35,8 +39,23 @@ export default function LoginBarbeiroScreen({ onEntrar, onCadastro }) {
       setErroSenha('');
     }
 
-    // Login ainda simulado: só valida os campos.
-    if (valido && onEntrar) onEntrar();
+   if (!valido) return;
+   setCarregando(true);
+setErroGeral('');
+try {
+  const credencial = await signInWithEmailAndPassword(auth, email.trim(), senha);
+  const perfil = await getDoc(doc(db, 'users', credencial.user.uid));
+  if (!perfil.exists() || perfil.data().tipo !== 'barbeiro') {
+    await signOut(auth);
+    setErroGeral('Esta conta não tem acesso ao painel do barbeiro.');
+    return;
+  }
+  if (onEntrar) onEntrar();
+} catch (erro) {
+  setErroGeral('E-mail ou senha incorretos.');
+} finally {
+  setCarregando(false);
+}
   };
 
   return (
@@ -72,9 +91,14 @@ export default function LoginBarbeiroScreen({ onEntrar, onCadastro }) {
         {!!erroSenha && <Text style={styles.erro}>{erroSenha}</Text>}
       </View>
 
-      <TouchableOpacity style={styles.botao} onPress={handleEntrar}>
-        <Text style={styles.botaoTexto}>Entrar</Text>
-      </TouchableOpacity>
+{!!erroGeral && <Text style={styles.erroGeral}>{erroGeral}</Text>}
+<TouchableOpacity
+  style={[styles.botao, carregando && { opacity: 0.5 }]}
+  onPress={handleEntrar}
+  disabled={carregando}
+>
+  <Text style={styles.botaoTexto}>{carregando ? 'Entrando...' : 'Entrar'}</Text>
+</TouchableOpacity>
 
       <TouchableOpacity onPress={onCadastro}>
         <Text style={styles.link}>Cadastre-se aqui</Text>
@@ -84,6 +108,7 @@ export default function LoginBarbeiroScreen({ onEntrar, onCadastro }) {
 }
 
 const styles = StyleSheet.create({
+  erroGeral: { color: cores.erro, fontSize: 12, marginTop: 20, textAlign: 'center', width: '70%' },
   container: {
     flex: 1,
     backgroundColor: cores.fundoEscuro,

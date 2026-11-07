@@ -1,23 +1,47 @@
-import React from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
 import HeaderBarbeiro from '../components/HeaderBarbeiro';
 import { cores } from '../theme/barbeiro';
+import { ouvirProximosAgendamentos } from '../services/agenda';
 
-// Dados de exemplo. Depois virão do Firestore.
-const AGENDAMENTOS = [
-  { id: '1', cliente: 'João Silva', info: 'Corte social • 20/10 às 09:00' },
-  { id: '2', cliente: 'Pedro Santos', info: 'Barba • 20/10 às 10:00' },
-  { id: '3', cliente: 'Lucas Lima', info: 'Corte + barba • 20/10 às 11:00' },
-  { id: '4', cliente: 'Marcos Souza', info: 'Corte degradê • 21/10 às 14:00' },
-];
+const doisDigitos = (n) => String(n).padStart(2, '0');
+const chaveHoje = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${doisDigitos(d.getMonth() + 1)}-${doisDigitos(d.getDate())}`;
+};
+const diaMes = (chave) => {
+  const [, mes, dia] = String(chave).split('-');
+  return `${dia}/${mes}`;
+};
+
 
 // Prop: onVoltar
 export default function AgendamentosClientesScreen({ onVoltar }) {
+  const [agendamentos, setAgendamentos] = useState([]);
+const [carregando, setCarregando] = useState(true);
+const [erro, setErro] = useState('');
+
+useEffect(() => {
+  const parar = ouvirProximosAgendamentos(
+    chaveHoje(),
+    (lista) => {
+      setAgendamentos(lista);
+      setCarregando(false);
+    },
+    () => {
+      setErro('Não foi possível carregar os agendamentos.');
+      setCarregando(false);
+    }
+  );
+  return parar;
+}, []);
   const renderItem = ({ item }) => (
     <View style={styles.item}>
-      <Text style={styles.cliente}>{item.cliente}</Text>
+      <Text style={styles.cliente}>{item.clienteNome}</Text>
       <View style={styles.bloco}>
-        <Text style={styles.blocoTexto}>{item.info}</Text>
+        <Text style={styles.blocoTexto}>
+  {item.servicoNome} • {diaMes(item.data)} às {item.horaInicio}
+</Text>
       </View>
     </View>
   );
@@ -32,12 +56,19 @@ export default function AgendamentosClientesScreen({ onVoltar }) {
           <Text style={styles.pilulaTexto}>Próximos atendimentos</Text>
         </View>
 
-        <FlatList
-          data={AGENDAMENTOS}
-          keyExtractor={(item) => item.id}
-          renderItem={renderItem}
-          showsVerticalScrollIndicator={false}
-        />
+        {carregando ? (
+  <ActivityIndicator size="large" color={cores.vinho} style={{ marginTop: 30 }} />
+) : erro ? (
+  <Text style={styles.mensagem}>{erro}</Text>
+) : (
+  <FlatList
+    data={agendamentos}
+    keyExtractor={(item) => item.id}
+    renderItem={renderItem}
+    showsVerticalScrollIndicator={false}
+    ListEmptyComponent={<Text style={styles.mensagem}>Nenhum agendamento futuro.</Text>}
+  />
+)}
       </View>
 
       <TouchableOpacity style={styles.botaoVoltar} onPress={onVoltar}>
@@ -85,4 +116,5 @@ const styles = StyleSheet.create({
     marginVertical: 14,
   },
   botaoVoltarTexto: { color: cores.branco, fontSize: 16 },
+  mensagem: { textAlign: 'center', color: cores.cinzaTexto, marginTop: 24, fontSize: 14 },
 });

@@ -1,25 +1,51 @@
-import React from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
 import HeaderBarbeiro from '../components/HeaderBarbeiro';
 import { cores } from '../theme/barbeiro';
+import { ouvirAgendamentosDoDia } from '../services/agenda';
 
-// Dados de exemplo. Depois serão lidos da coleção appointments do Firestore.
-const AGENDA = [
-  { id: '1', horario: '09:00', descricao: 'Corte social - João Silva' },
-  { id: '2', horario: '10:00', descricao: 'Barba - Pedro Santos' },
-  { id: '3', horario: '11:00', descricao: 'Corte + barba - Lucas Lima' },
-  { id: '4', horario: '14:00', descricao: 'Corte degradê - Marcos Souza' },
-  { id: '5', horario: '15:00', descricao: 'Horário livre' },
-];
+const doisDigitos = (n) => String(n).padStart(2, '0');
+const chaveData = (d) =>
+  `${d.getFullYear()}-${doisDigitos(d.getMonth() + 1)}-${doisDigitos(d.getDate())}`;
+const textoData = (d) =>
+  `${doisDigitos(d.getDate())}/${doisDigitos(d.getMonth() + 1)}/${d.getFullYear()}`;
+
 
 // Prop: onVoltar
 export default function VisualizarAgendaScreen({ onVoltar }) {
+  const [dia, setDia] = useState(new Date());
+const [agendamentos, setAgendamentos] = useState([]);
+const [carregando, setCarregando] = useState(true);
+const [erro, setErro] = useState('');
+
+useEffect(() => {
+  setCarregando(true);
+  setErro('');
+  const parar = ouvirAgendamentosDoDia(
+    chaveData(dia),
+    (lista) => {
+      setAgendamentos(lista);
+      setCarregando(false);
+    },
+    () => {
+      setErro('Não foi possível carregar a agenda.');
+      setCarregando(false);
+    }
+  );
+  return parar;
+}, [dia]);
+
+const mudarDia = (delta) => {
+  setDia(new Date(dia.getFullYear(), dia.getMonth(), dia.getDate() + delta));
+};
   // Desenha cada linha da lista: horário pequeno em cima e bloco cinza embaixo
   const renderItem = ({ item }) => (
     <View style={styles.item}>
-      <Text style={styles.horario}>{item.horario}</Text>
+      <Text style={styles.horario}>{item.horaInicio}</Text>
       <View style={styles.bloco}>
-        <Text style={styles.blocoTexto}>{item.descricao}</Text>
+        <Text style={styles.blocoTexto}>
+  {item.servicoNome} - {item.clienteNome}
+</Text>
       </View>
     </View>
   );
@@ -27,14 +53,31 @@ export default function VisualizarAgendaScreen({ onVoltar }) {
   return (
     <View style={styles.container}>
       <HeaderBarbeiro titulo={'Visualizar\nagenda'} />
+    <View style={styles.navegacaoDia}>
+  <TouchableOpacity onPress={() => mudarDia(-1)}>
+    <Text style={styles.seta}>‹</Text>
+  </TouchableOpacity>
+  <Text style={styles.dataTexto}>{textoData(dia)}</Text>
+  <TouchableOpacity onPress={() => mudarDia(1)}>
+    <Text style={styles.seta}>›</Text>
+  </TouchableOpacity>
+</View>
 
       <View style={styles.cartao}>
-        <FlatList
-          data={AGENDA}
-          keyExtractor={(item) => item.id}
-          renderItem={renderItem}
-          showsVerticalScrollIndicator={false}
-        />
+{carregando ? (
+  <ActivityIndicator size="large" color={cores.vinho} style={{ marginTop: 30 }} />
+) : erro ? (
+  <Text style={styles.mensagem}>{erro}</Text>
+) : (
+  <FlatList
+    data={agendamentos}
+    keyExtractor={(item) => item.id}
+    renderItem={renderItem}
+    showsVerticalScrollIndicator={false}
+    ListEmptyComponent={<Text style={styles.mensagem}>Nenhum agendamento neste dia.</Text>}
+  />
+)}
+
       </View>
 
       <TouchableOpacity style={styles.botaoVoltar} onPress={onVoltar}>
@@ -73,4 +116,14 @@ const styles = StyleSheet.create({
     marginVertical: 14,
   },
   botaoVoltarTexto: { color: cores.branco, fontSize: 16 },
+  navegacaoDia: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  width: '70%',
+  marginTop: 16,
+},
+seta: { fontSize: 32, color: cores.vinho, paddingHorizontal: 12 },
+dataTexto: { fontSize: 18, color: cores.preto, fontWeight: 'bold' },
+mensagem: { textAlign: 'center', color: cores.cinzaTexto, marginTop: 24, fontSize: 14 },
 });
