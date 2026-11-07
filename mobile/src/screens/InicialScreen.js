@@ -4,6 +4,7 @@ import {
   Image,
   ImageBackground,
   ScrollView,
+  Pressable,
   StyleSheet,
   TouchableOpacity,
 } from 'react-native';
@@ -21,6 +22,7 @@ export default function InicialScreen({
   agendamentos = AGENDAMENTOS_EXEMPLO,
   onCancelar = () => {},
   onEscolherServico = () => {},
+  onSair = () => {},
 }) {
   return (
     <View style={styles.container}>
@@ -71,6 +73,10 @@ export default function InicialScreen({
           onPress={onEscolherServico}
           style={styles.botao}
         />
+
+        <Pressable onPress={onSair}>
+          <Text style={styles.sair}>Sair</Text>
+        </Pressable>
       </View>
     </View>
   );
@@ -112,7 +118,10 @@ const styles = StyleSheet.create({
     fontSize: 22,
     marginBottom: spacing.lg,
   },
-  lista: { width: '80%', flex: 1 },
+  lista: { 
+    width: '80%', 
+    flex: 1,
+  },
   cartao: {
     backgroundColor: '#D9D9D9',
     borderRadius: radius.sm,
@@ -127,8 +136,16 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
-  cartaoTexto: { color: colors.textDark, fontSize: 15, marginTop: spacing.xs },
-  vazio: { color: colors.textDark, textAlign: 'center', marginTop: spacing.lg },
+  cartaoTexto: { 
+    color: colors.textDark,
+    fontSize: 15, 
+    marginTop: spacing.xs,
+  },
+  vazio: { 
+    color: colors.textDark, 
+    textAlign: 'center', 
+    marginTop: spacing.lg,
+  },
   botao: {
     borderColor: '#D9D9D9',
     borderWidth: 5,

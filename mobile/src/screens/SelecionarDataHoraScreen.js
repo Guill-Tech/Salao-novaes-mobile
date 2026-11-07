@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -6,17 +6,21 @@ import {
   Modal,
   FlatList,
   TouchableOpacity,
+  ActivityIndicator,
+  Alert,
   StyleSheet,
 } from 'react-native';
+import { gerarHorarios, horariosLivres } from '../services/horarios';
+import {
+  buscarExpediente,
+  buscarOcupadosDoMes,
+  criarAgendamento,
+  mensagemDeErroAgendamento,
+} from '../services/agendamentos';
 
-// ===== CONFIGURAÇÃO DO EXPEDIENTE (ajuste quando definirem os horários reais) =====
-const HORA_ABERTURA = 9;      // primeiro horário: 09:00
-const HORA_FECHAMENTO = 18;   // o último horário começa antes das 18:00
-const INTERVALO_MIN = 60;     // duração de cada atendimento, em minutos
-const DIAS_FECHADO = [0];     // 0 = domingo, 1 = segunda ... 6 = sábado
-const MESES_A_FRENTE = 3;     // até quantos meses à frente dá para navegar
-// Horários ocupados (exemplo). Depois virão da coleção appointments do Firestore.
-const OCUPADOS_EXEMPLO = ['10:00', '14:00'];
+// O expediente (horários, intervalo e dias abertos) agora vem do Firestore,
+// do documento configuracao/expediente. Aqui só ficam as opções da tela.
+const MESES_A_FRENTE = 3; // até quantos meses à frente dá para navegar
 
 const cores = {
   fundo: '#A8A8A8',
@@ -38,7 +42,7 @@ const DIAS_SEMANA = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
 
 const doisDigitos = (n) => String(n).padStart(2, '0');
 
-// Chave AAAA-MM-DD (usada depois para montar o ID do agendamento)
+// Chave AAAA-MM-DD (usada para montar o ID do agendamento)
 const chaveData = (d) =>
   `${d.getFullYear()}-${doisDigitos(d.getMonth() + 1)}-${doisDigitos(d.getDate())}`;
 
@@ -48,59 +52,112 @@ const textoData = (d) =>
 
 const mesmoDia = (a, b) => chaveData(a) === chaveData(b);
 
-// Gera os horários do expediente: 09:00, 10:00, 11:00...
-function gerarHorarios() {
-  const lista = [];
-  for (let min = HORA_ABERTURA * 60; min < HORA_FECHAMENTO * 60; min += INTERVALO_MIN) {
-    lista.push(`${doisDigitos(Math.floor(min / 60))}:${doisDigitos(min % 60)}`);
-  }
-  return lista;
+// Horários livres de um dia: o dia precisa estar no expediente, e saem os
+// ocupados e, se for hoje, os que já passaram.
+// ocupadosPorData tem o formato { '2026-10-26': ['10:00', '14:00'] }.
+function horariosDisponiveis(dia, agora, expediente, ocupadosPorData) {
+  if (!(expediente.diasFuncionamento || []).includes(dia.getDay())) return [];
+  const chave = chaveData(dia);
+  const ocupados = ocupadosPorData[chave] || [];
+  return horariosLivres(gerarHorarios(expediente), ocupados, chave, agora);
 }
 
-// Horários livres de um dia: tira os ocupados e, se for hoje, os que já passaram
-function horariosDisponiveis(dia, agora) {
-  return gerarHorarios().filter((h) => {
-    if (OCUPADOS_EXEMPLO.includes(h)) return false;
-    if (mesmoDia(dia, agora)) {
-      const [hh, mm] = h.split(':').map(Number);
-      const slot = new Date(dia.getFullYear(), dia.getMonth(), dia.getDate(), hh, mm);
-      if (slot <= agora) return false;
-    }
-    return true;
-  });
-}
-
-// Um dia pode ser escolhido se não passou, não é dia fechado e tem horário livre
-function diaDisponivel(dia, agora) {
+// Um dia pode ser escolhido se não passou e tem horário livre
+function diaDisponivel(dia, agora, expediente, ocupadosPorData) {
   const inicioHoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
   if (dia < inicioHoje) return false;
-  if (DIAS_FECHADO.includes(dia.getDay())) return false;
-  return horariosDisponiveis(dia, agora).length > 0;
+  return horariosDisponiveis(dia, agora, expediente, ocupadosPorData).length > 0;
 }
 
-function primeiroDiaDisponivel(agora) {
+function primeiroDiaDisponivel(agora, expediente, ocupadosPorData) {
   for (let i = 0; i < 60; i++) {
     const d = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate() + i);
-    if (diaDisponivel(d, agora)) return d;
+    if (diaDisponivel(d, agora, expediente, ocupadosPorData)) return d;
   }
   return null;
 }
 
-// Props: onVoltar, onAgendar({ data, dataTexto, hora })
-export default function SelecionarDataHoraScreen({ onVoltar, onAgendar }) {
+// Props:
+//   servico    -> { id, nome } do serviço escolhido na tela anterior
+//   onVoltar   -> volta para a tela anterior
+//   onAgendado -> chamado depois que o servidor confirmou: ({ data, dataTexto, hora })
+export default function SelecionarDataHoraScreen({
+  servico,
+  onVoltar = () => {},
+  onAgendado = () => {},
+}) {
   const agora = useMemo(() => new Date(), []);
-  const inicial = useMemo(() => primeiroDiaDisponivel(agora), [agora]);
 
-  const [diaSelecionado, setDiaSelecionado] = useState(inicial);
-  const [hora, setHora] = useState(inicial ? horariosDisponiveis(inicial, agora)[0] : null);
+  const [expediente, setExpediente] = useState(null);
+  const [ocupadosPorData, setOcupadosPorData] = useState({});
+  const [erro, setErro] = useState('');
+  const [carregandoMes, setCarregandoMes] = useState(false);
+  const [salvando, setSalvando] = useState(false);
+
+  const [diaSelecionado, setDiaSelecionado] = useState(null);
+  const [hora, setHora] = useState(null);
   const [mesVisivel, setMesVisivel] = useState({
-    ano: (inicial || agora).getFullYear(),
-    mes: (inicial || agora).getMonth(),
+    ano: agora.getFullYear(),
+    mes: agora.getMonth(),
   });
   const [modalAberto, setModalAberto] = useState(false);
 
-  // ----- Calendário: monta as células do mês (vazias no início + dias do mês) -----
+  // Garante que o dia inicial é escolhido só uma vez, na primeira carga.
+  const selecaoInicialFeita = useRef(false);
+
   const { ano, mes } = mesVisivel;
+
+  // 1) Quando a tela abre, busca o expediente no Firestore.
+  useEffect(() => {
+    async function carregarExpediente() {
+      try {
+        setExpediente(await buscarExpediente());
+      } catch (e) {
+        setErro(mensagemDeErroAgendamento(e.code));
+      }
+    }
+    carregarExpediente();
+  }, []);
+
+  // 2) Busca os horários ocupados do mês e guarda em ocupadosPorData.
+  async function carregarMes(exp, anoMes, mesMes) {
+    setCarregandoMes(true);
+    try {
+      const novos = await buscarOcupadosDoMes(exp.barbeiroId, anoMes, mesMes);
+      const prefixo = `${anoMes}-${doisDigitos(mesMes + 1)}`;
+      setOcupadosPorData((anterior) => {
+        const resto = {};
+        Object.keys(anterior).forEach((chave) => {
+          if (!chave.startsWith(prefixo)) resto[chave] = anterior[chave];
+        });
+        return { ...resto, ...novos };
+      });
+
+      // Na primeira carga, já deixa o primeiro dia livre selecionado.
+      if (!selecaoInicialFeita.current) {
+        selecaoInicialFeita.current = true;
+        const primeiro = primeiroDiaDisponivel(agora, exp, novos);
+        setDiaSelecionado(primeiro);
+        setHora(
+          primeiro ? horariosDisponiveis(primeiro, agora, exp, novos)[0] ?? null : null
+        );
+      }
+      return novos;
+    } catch (e) {
+      Alert.alert('Não foi possível carregar os horários', mensagemDeErroAgendamento(e.code));
+      return null;
+    } finally {
+      setCarregandoMes(false);
+    }
+  }
+
+  // Roda quando o expediente chega e sempre que o mês visível muda.
+  useEffect(() => {
+    if (!expediente) return;
+    carregarMes(expediente, ano, mes);
+  }, [expediente, ano, mes]);
+
+  // ----- Calendário: monta as células do mês (vazias no início + dias do mês) -----
   const celulas = useMemo(() => {
     const deslocamento = new Date(ano, mes, 1).getDay();
     const totalDias = new Date(ano, mes + 1, 0).getDate();
@@ -119,23 +176,71 @@ export default function SelecionarDataHoraScreen({ onVoltar, onAgendar }) {
     setMesVisivel({ ano: d.getFullYear(), mes: d.getMonth() });
   };
 
+  // Enquanto o expediente não chega, mostra "carregando" (ou o erro).
+  if (erro) {
+    return (
+      <View style={styles.centro}>
+        <Text style={styles.erroTexto}>{erro}</Text>
+        <TouchableOpacity onPress={onVoltar}>
+          <Text style={styles.voltar}>Voltar</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+  if (!expediente) {
+    return (
+      <View style={styles.centro}>
+        <ActivityIndicator size="large" color={cores.branco} />
+      </View>
+    );
+  }
+
+  const horariosDoDia = diaSelecionado
+    ? horariosDisponiveis(diaSelecionado, agora, expediente, ocupadosPorData)
+    : [];
+
   const escolherDia = (dia) => {
     setDiaSelecionado(dia);
-    setHora(horariosDisponiveis(dia, agora)[0] || null); // sugere o primeiro horário livre
+    const livres = horariosDisponiveis(dia, agora, expediente, ocupadosPorData);
+    setHora(livres[0] || null); // sugere o primeiro horário livre
   };
 
-  const horariosDoDia = diaSelecionado ? horariosDisponiveis(diaSelecionado, agora) : [];
-
-  const agendar = () => {
-    if (!diaSelecionado || !hora || !onAgendar) return;
-    onAgendar({
-      data: chaveData(diaSelecionado),
-      dataTexto: textoData(diaSelecionado),
-      hora,
-    });
+  const agendar = async () => {
+    if (!diaSelecionado || !hora || salvando) return;
+    setSalvando(true);
+    try {
+      await criarAgendamento({
+        servico,
+        data: chaveData(diaSelecionado),
+        horaInicio: hora,
+        barbeiroId: expediente.barbeiroId,
+      });
+      // Só chega aqui depois que o servidor confirmou.
+      onAgendado({
+        data: chaveData(diaSelecionado),
+        dataTexto: textoData(diaSelecionado),
+        hora,
+      });
+    } catch (e) {
+      Alert.alert('Não foi possível agendar', mensagemDeErroAgendamento(e.code));
+      if (e.code === 'horario-ocupado') {
+        // Outra pessoa pegou o horário: atualiza a lista e sugere outro.
+        const novos = await carregarMes(
+          expediente,
+          diaSelecionado.getFullYear(),
+          diaSelecionado.getMonth()
+        );
+        if (novos) {
+          const livres = horariosDisponiveis(diaSelecionado, agora, expediente, novos);
+          setHora(livres[0] ?? null);
+        }
+      }
+    } finally {
+      setSalvando(false);
+    }
   };
 
-  const podeAgendar = !!diaSelecionado && !!hora;
+  const podeAgendar = !!diaSelecionado && !!hora && !salvando;
 
   return (
     <View style={styles.container}>
@@ -151,6 +256,7 @@ export default function SelecionarDataHoraScreen({ onVoltar, onAgendar }) {
           <Text style={styles.tituloMes}>
             {NOMES_MES[mes]} {ano}
           </Text>
+          {carregandoMes && <ActivityIndicator size="small" color={cores.azul} />}
           <View style={styles.setas}>
             <TouchableOpacity disabled={!podeVoltarMes} onPress={() => mudarMes(-1)}>
               <Text style={[styles.seta, !podeVoltarMes && styles.setaDesativada]}>‹</Text>
@@ -172,7 +278,8 @@ export default function SelecionarDataHoraScreen({ onVoltar, onAgendar }) {
         <View style={styles.linha}>
           {celulas.map((dia, i) => {
             if (!dia) return <View key={`vazio-${i}`} style={styles.celula} />;
-            const disponivel = diaDisponivel(dia, agora);
+            const disponivel =
+              !carregandoMes && diaDisponivel(dia, agora, expediente, ocupadosPorData);
             const ativo = diaSelecionado && mesmoDia(dia, diaSelecionado);
             return (
               <TouchableOpacity
@@ -205,7 +312,9 @@ export default function SelecionarDataHoraScreen({ onVoltar, onAgendar }) {
             disabled={horariosDoDia.length === 0}
             onPress={() => setModalAberto(true)}
           >
-            <Text style={styles.chipHoraTexto}>{hora || 'Sem horários'}</Text>
+            <Text style={styles.chipHoraTexto}>
+              {hora || (horariosDoDia.length > 0 ? 'Escolher' : 'Sem horários')}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -215,7 +324,7 @@ export default function SelecionarDataHoraScreen({ onVoltar, onAgendar }) {
         disabled={!podeAgendar}
         onPress={agendar}
       >
-        <Text style={styles.botaoTexto}>Agendar</Text>
+        <Text style={styles.botaoTexto}>{salvando ? 'Aguarde...' : 'Agendar'}</Text>
       </TouchableOpacity>
 
       <TouchableOpacity onPress={onVoltar}>
@@ -267,6 +376,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 50,
   },
+  centro: {
+    flex: 1,
+    backgroundColor: cores.fundo,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  erroTexto: { color: cores.branco, fontSize: 16, textAlign: 'center' },
   logo: {
     width: 120,
     height: 120,

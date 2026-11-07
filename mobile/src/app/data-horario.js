@@ -1,4 +1,3 @@
-import { Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import SelecionarDataHoraScreen from '../screens/SelecionarDataHoraScreen';
 import { criarAgendamento, mensagemDeErro } from '../services/agendamento';
