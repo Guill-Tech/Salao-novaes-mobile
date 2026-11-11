@@ -23,6 +23,15 @@ export async function buscarExpediente() {
   return resposta.data();
 }
 
+async function horariosOcupadosAtivos(documentos) {
+  return Promise.all(
+    documentos.map(async (documento) => {
+      const agendamento = await getDoc(doc(db, 'appointments', documento.id));
+      return !agendamento.exists() || agendamento.data().status !== 'cancelado';
+    })
+  );
+}
+
 // Horários já ocupados em uma data. Devolve só as horas, sem dados pessoais.
 export async function buscarHorariosOcupados(barbeiroId, data) {
   const consulta = query(
@@ -31,7 +40,10 @@ export async function buscarHorariosOcupados(barbeiroId, data) {
     where('data', '==', data)
   );
   const resposta = await getDocs(consulta);
-  return resposta.docs.map((documento) => documento.data().horaInicio);
+  const ativos = await horariosOcupadosAtivos(resposta.docs);
+  return resposta.docs
+    .filter((_, indice) => ativos[indice])
+    .map((documento) => documento.data().horaInicio);
 }
 
 // Horários ocupados de um mês inteiro, agrupados por data.
@@ -46,10 +58,14 @@ export async function buscarOcupadosDoMes(barbeiroId, ano, mes) {
     where('data', '<=', `${prefixo}-31`)
   );
   const resposta = await getDocs(consulta);
+  const documentos = resposta.docs.filter(
+    (documento) => documento.data().barbeiroId === barbeiroId
+  );
+  const ativos = await horariosOcupadosAtivos(documentos);
   const porData = {};
-  resposta.docs.forEach((documento) => {
+  documentos.forEach((documento, indice) => {
+    if (!ativos[indice]) return;
     const item = documento.data();
-    if (item.barbeiroId !== barbeiroId) return;
     if (!porData[item.data]) porData[item.data] = [];
     porData[item.data].push(item.horaInicio);
   });
@@ -60,26 +76,44 @@ export async function buscarOcupadosDoMes(barbeiroId, ano, mes) {
 export async function criarAgendamento({ servico, data, horaInicio, barbeiroId }) {
   const usuario = auth.currentUser;
   if (!usuario) throw criarErro('nao-logado');
+  if (!servico?.id || !servico?.nome) throw criarErro('servico-invalido');
 
   // O mesmo ID nos dois documentos impede dois agendamentos no mesmo horário.
   const idHorario = `${barbeiroId}_${data}_${horaInicio.replace(':', '')}`;
   const refOcupado = doc(db, 'ocupados', idHorario);
   const refAgendamento = doc(db, 'appointments', idHorario);
+  const dadosAgendamento = {
+    userId: usuario.uid,
+    barbeiroId,
+    serviceId: servico.id,
+    servicoNome: servico.nome,
+    servicoPreco: Number(servico.preco) || 0,
+    data,
+    horaInicio,
+    status: 'confirmado',
+    criadoEm: serverTimestamp(),
+  };
 
   await runTransaction(db, async (transacao) => {
     const ocupado = await transacao.get(refOcupado);
+    const agendamento = await transacao.get(refAgendamento);
+
+    if (agendamento.exists()) {
+      if (agendamento.data().status !== 'cancelado') {
+        throw criarErro('horario-ocupado');
+      }
+
+      transacao.update(refAgendamento, dadosAgendamento);
+      if (!ocupado.exists()) {
+        transacao.set(refOcupado, { barbeiroId, data, horaInicio });
+      }
+      return;
+    }
+
     if (ocupado.exists()) throw criarErro('horario-ocupado');
 
     transacao.set(refOcupado, { barbeiroId, data, horaInicio });
-    transacao.set(refAgendamento, {
-      userId: usuario.uid,
-      barbeiroId,
-      serviceId: servico.id,
-      data,
-      horaInicio,
-      status: 'confirmado',
-      criadoEm: serverTimestamp(),
-    });
+    transacao.set(refAgendamento, dadosAgendamento);
   });
 
   return idHorario;
@@ -92,6 +126,8 @@ export function mensagemDeErroAgendamento(codigo) {
       return 'Esse horário acabou de ser ocupado. Escolha outro.';
     case 'nao-logado':
       return 'Faça login para agendar.';
+    case 'servico-invalido':
+      return 'Volte e escolha um serviço antes de agendar.';
     case 'expediente-nao-encontrado':
       return 'Os horários ainda não foram configurados.';
     case 'permission-denied':

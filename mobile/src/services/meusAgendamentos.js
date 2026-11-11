@@ -44,5 +44,6 @@ export function ouvirMeusAgendamentos(aoMudar, aoErrar) {
 // Cancela, se ainda estiver dentro do prazo
 export async function cancelarAgendamento(agendamento) {
   if (!podeCancelar(agendamento)) throw new Error('PRAZO_CANCELAMENTO');
+
   await updateDoc(doc(db, 'appointments', agendamento.id), { status: 'cancelado' });
 }

@@ -11,15 +11,10 @@ import {
 import Button from '../components/Button';
 import { colors, fonts, spacing, radius } from '../theme';
 
-// Dados de exemplo. Na Sprint 2 virão do Firestore (coleção appointments).
-const AGENDAMENTOS_EXEMPLO = [
-  { id: '1', servico: 'Corte social', data: '12/10', hora: '14:00' },
-  { id: '2', servico: 'Barba', data: '15/10', hora: '10:30' },
-];
-
 export default function InicialScreen({
   nomeCliente = 'Cliente',
-  agendamentos = AGENDAMENTOS_EXEMPLO,
+  agendamentos = [],
+  erroAgendamentos = '',
   onCancelar = () => {},
   onEscolherServico = () => {},
   onSair = () => {},
@@ -44,10 +39,12 @@ export default function InicialScreen({
       </ImageBackground>
 
       <View style={styles.conteudo}>
-        <Text style={styles.titulo}>Agendamentos :</Text>
+        <Text style={styles.titulo}>Agendamentos</Text>
 
         <ScrollView style={styles.lista} showsVerticalScrollIndicator={false}>
-          {agendamentos.length === 0 ? (
+          {erroAgendamentos ? (
+            <Text style={styles.vazio}>{erroAgendamentos}</Text>
+          ) : agendamentos.length === 0 ? (
             <Text style={styles.vazio}>Nenhum agendamento ainda</Text>
           ) : (
             agendamentos.map((item) => (
@@ -56,13 +53,16 @@ export default function InicialScreen({
                 <Text style={styles.cartaoTexto}>
                   {item.data} às {item.hora}
                 </Text>
-{item.podeCancelar ? (
-  <TouchableOpacity style={styles.botaoCancelar} onPress={() => onCancelar(item.id)}>
-    <Text style={styles.botaoCancelarTexto}>Cancelar</Text>
-  </TouchableOpacity>
-) : (
-  <Text style={styles.avisoCancelar}>Cancelamento só até 24 h antes</Text>
-)}
+                {item.podeCancelar ? (
+                  <TouchableOpacity
+                    style={styles.botaoCancelar}
+                    onPress={() => onCancelar(item.id)}
+                  >
+                    <Text style={styles.botaoCancelarTexto}>Cancelar</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <Text style={styles.avisoCancelar}>Cancelamento só até 24 h antes</Text>
+                )}
               </View>
             ))
           )}
@@ -152,14 +152,14 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   botaoCancelar: {
-  alignSelf: 'flex-start',
-  marginTop: 8,
-  paddingVertical: 4,
-  paddingHorizontal: 12,
-  borderRadius: 14,
-  borderWidth: 1,
-  borderColor: '#C0392B',
-},
-botaoCancelarTexto: { color: '#C0392B', fontSize: 12 },
-avisoCancelar: { marginTop: 8, fontSize: 11, color: '#888888' },
+    alignSelf: 'flex-start',
+    marginTop: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#C0392B',
+  },
+  botaoCancelarTexto: { color: '#C0392B', fontSize: 12 },
+  avisoCancelar: { marginTop: 8, fontSize: 11, color: '#888888' },
 });

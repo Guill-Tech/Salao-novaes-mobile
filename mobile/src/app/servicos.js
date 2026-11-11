@@ -4,23 +4,19 @@ import ServicosScreen from '../screens/ServicosScreen';
 export default function Servicos() {
   const router = useRouter();
 
-  
   return (
     <ServicosScreen
-      onConfirmar={(servico) =>
+      onVoltar={() => router.replace('/inicial')}
+      onConfirmar={(servico) => {
         router.push({
           pathname: '/data-horario',
           params: {
+            servicoId: servico.id,
             servicoNome: servico.nome,
             servicoPreco: String(servico.preco),
-          
-            params: {
-          servicoId: servico.id,        
-          servicoNome: servico.nome,
-          servicoPreco: String(servico.preco),
-},},
-        })
-      }
+          },
+        });
+      }}
     />
   );
 }

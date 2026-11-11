@@ -4,7 +4,11 @@ import HeaderBarbeiro from '../components/HeaderBarbeiro';
 import { cores } from '../theme/barbeiro';
 
 // Props: onAgenda, onAgendamentos, onVoltar
-export default function PainelBarbeiroScreen({ onAgenda, onAgendamentos, onVoltar }) {
+export default function PainelBarbeiroScreen({
+  onAgenda,
+  onAgendamentos,
+  onVoltar,
+}) {
   return (
     <View style={styles.container}>
       <HeaderBarbeiro titulo={'Painel do\nBarbeiro'} />

@@ -1,4 +1,12 @@
-import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
+import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+  doc,
+  getDoc,
+  updateDoc,
+} from 'firebase/firestore';
 import { db } from './firebase';
 
 // Guarda nomes já buscados, para não consultar o mesmo cliente várias vezes
@@ -39,16 +47,32 @@ function ordenar(lista) {
 }
 
 // Escuta, em tempo real, os agendamentos de um dia (dataChave = 'AAAA-MM-DD')
-export function ouvirAgendamentosDoDia(dataChave, aoMudar, aoErrar) {
+export function ouvirAgendamentosDoDia(
+  dataChave,
+  aoMudar,
+  aoErrar,
+  { incluirCancelados = false } = {}
+) {
   const consulta = query(collection(db, 'appointments'), where('data', '==', dataChave));
   return onSnapshot(
     consulta,
     async (snap) => {
-      const lista = await Promise.all(snap.docs.map(completar));
-      aoMudar(ordenar(lista.filter((a) => a.status !== 'cancelado')));
+      try {
+        const lista = await Promise.all(snap.docs.map(completar));
+        aoMudar(
+          ordenar(incluirCancelados ? lista : lista.filter((a) => a.status !== 'cancelado'))
+        );
+      } catch (erro) {
+        aoErrar(erro);
+      }
     },
     aoErrar
   );
+}
+
+export async function atualizarStatusAgendamento(agendamento, status) {
+  const refAgendamento = doc(db, 'appointments', agendamento.id);
+  await updateDoc(refAgendamento, { status });
 }
 
 // Escuta os agendamentos de hoje em diante
@@ -57,8 +81,12 @@ export function ouvirProximosAgendamentos(hojeChave, aoMudar, aoErrar) {
   return onSnapshot(
     consulta,
     async (snap) => {
-      const lista = await Promise.all(snap.docs.map(completar));
-      aoMudar(ordenar(lista.filter((a) => a.status !== 'cancelado')));
+      try {
+        const lista = await Promise.all(snap.docs.map(completar));
+        aoMudar(ordenar(lista.filter((a) => a.status !== 'cancelado')));
+      } catch (erro) {
+        aoErrar(erro);
+      }
     },
     aoErrar
   );

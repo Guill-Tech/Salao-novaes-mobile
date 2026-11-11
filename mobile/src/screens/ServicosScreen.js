@@ -19,8 +19,10 @@ function formatarPreco(valor) {
   return `R$ ${Number(valor).toFixed(2).replace('.', ',')}`;
 }
  
-// onConfirmar recebe o serviço escolhido. Será ligado à tela de horários.
-export default function ServicosScreen({ onConfirmar = () => {} }) {
+export default function ServicosScreen({
+  onConfirmar = () => {},
+  onVoltar = () => {},
+}) {
   const [servicos, setServicos] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState('');
@@ -108,6 +110,9 @@ export default function ServicosScreen({ onConfirmar = () => {} }) {
           onPress={confirmar}
           style={styles.botao}
         />
+        <Pressable onPress={onVoltar} accessibilityRole="button">
+          <Text style={styles.voltar}>Voltar</Text>
+        </Pressable>
       </View>
     </View>
   );
@@ -175,5 +180,10 @@ const styles = StyleSheet.create({
     borderColor: '#D9D9D9',
     borderWidth: 5,
     marginTop: spacing.md,
+  },
+  voltar: {
+    color: colors.primary,
+    marginTop: spacing.md,
+    textDecorationLine: 'underline',
   },
 });

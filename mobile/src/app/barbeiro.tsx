@@ -1,7 +1,8 @@
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
+  ActivityIndicator,
   FlatList,
   Platform,
   Pressable,
@@ -10,6 +11,8 @@ import {
   Text,
   View,
 } from 'react-native';
+import { atualizarStatusAgendamento, ouvirAgendamentosDoDia } from '../services/agenda';
+import { sair as sairDaConta } from '../services/autenticacao';
 
 /* ------------------------------------------------------------------ */
 /* TIPOS                                                               */
@@ -18,6 +21,9 @@ type Status = 'pendente' | 'concluido' | 'cancelado';
 
 type Agendamento = {
   id: string;
+  data: string;
+  barbeiroId: string;
+  horaInicio: string;
   horario: string; // "09:00"
   cliente: string;
   servico: string;
@@ -25,26 +31,24 @@ type Agendamento = {
   status: Status;
 };
 
+type AgendamentoDoFirestore = {
+  id: string;
+  data: string;
+  barbeiroId: string;
+  horaInicio: string;
+  clienteNome: string;
+  servicoNome: string;
+  servicoPreco?: number;
+  status: string;
+};
+
 type Filtro = 'todos' | Status;
 
-/* ------------------------------------------------------------------ */
-/* DADOS DE EXEMPLO                                                    */
-/* TROQUE POR: chamada da API do projeto (veja carregarAgendamentos)   */
-/* ------------------------------------------------------------------ */
-const DADOS_EXEMPLO: Agendamento[] = [
-  { id: '1', horario: '09:00', cliente: 'Carlos Silva', servico: 'Corte', valor: 40, status: 'concluido' },
-  { id: '2', horario: '10:00', cliente: 'João Pereira', servico: 'Corte + Barba', valor: 65, status: 'pendente' },
-  { id: '3', horario: '11:00', cliente: 'Marcos Lima', servico: 'Barba', valor: 30, status: 'pendente' },
-  { id: '4', horario: '14:00', cliente: 'Rafael Souza', servico: 'Corte', valor: 40, status: 'pendente' },
-  { id: '5', horario: '15:00', cliente: 'Pedro Alves', servico: 'Sobrancelha', valor: 15, status: 'cancelado' },
-  { id: '6', horario: '16:30', cliente: 'Lucas Rocha', servico: 'Corte + Barba', valor: 65, status: 'pendente' },
-];
-
-// Quando o backend estiver pronto, substitua o conteúdo desta função:
-// const resposta = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/agendamentos/hoje`);
-// return await resposta.json();
-async function carregarAgendamentos(): Promise<Agendamento[]> {
-  return DADOS_EXEMPLO;
+function chaveDeHoje() {
+  const hoje = new Date();
+  const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+  const dia = String(hoje.getDate()).padStart(2, '0');
+  return `${hoje.getFullYear()}-${mes}-${dia}`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -68,6 +72,7 @@ const FILTROS: { chave: Filtro; rotulo: string }[] = [
   { chave: 'todos', rotulo: 'Todos' },
   { chave: 'pendente', rotulo: 'Pendentes' },
   { chave: 'concluido', rotulo: 'Concluídos' },
+  { chave: 'cancelado', rotulo: 'Cancelados' },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -75,11 +80,45 @@ const FILTROS: { chave: Filtro; rotulo: string }[] = [
 /* ------------------------------------------------------------------ */
 export default function TelaBarbeiro() {
   const router = useRouter();
-  const [agendamentos, setAgendamentos] = useState<Agendamento[]>(DADOS_EXEMPLO);
+  const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState('');
+  const [atualizandoId, setAtualizandoId] = useState<string | null>(null);
   const [filtro, setFiltro] = useState<Filtro>('todos');
 
-  // Para buscar da API ao abrir a tela, use:
-  // useEffect(() => { carregarAgendamentos().then(setAgendamentos); }, []);
+  const dataChave = chaveDeHoje();
+
+  useEffect(() => {
+    const parar = ouvirAgendamentosDoDia(
+      dataChave,
+      (lista: AgendamentoDoFirestore[]) => {
+        const novosAgendamentos: Agendamento[] = lista.map((item) => ({
+            ...item,
+            horario: item.horaInicio,
+            cliente: item.clienteNome,
+            servico: item.servicoNome,
+            valor: Number(item.servicoPreco || 0),
+            status:
+              item.status === 'cancelado'
+                ? 'cancelado'
+                : item.status === 'concluido'
+                  ? 'concluido'
+                  : 'pendente',
+          }));
+        setAgendamentos(novosAgendamentos);
+        setErro('');
+        setCarregando(false);
+      },
+      (erroCarga: unknown) => {
+        console.error('Não foi possível carregar a agenda do barbeiro:', erroCarga);
+        setErro('Não foi possível carregar os atendimentos. Tente novamente.');
+        setCarregando(false);
+      },
+      { incluirCancelados: true }
+    );
+
+    return parar;
+  }, [dataChave]);
 
   const hoje = new Date().toLocaleDateString('pt-BR', {
     weekday: 'long',
@@ -102,21 +141,40 @@ export default function TelaBarbeiro() {
     };
   }, [agendamentos]);
 
-  function alterarStatus(id: string, status: Status) {
-    // Quando houver API: envie a mudança ao servidor antes de atualizar a lista.
-    setAgendamentos((atual) => atual.map((a) => (a.id === id ? { ...a, status } : a)));
+  async function alterarStatus(id: string, status: Status) {
+    const item = agendamentos.find((agendamento) => agendamento.id === id);
+    if (!item || atualizandoId) return;
+
+    setAtualizandoId(id);
+    try {
+      await atualizarStatusAgendamento(item, status);
+    } catch (erroStatus) {
+      console.error('Não foi possível atualizar o atendimento:', erroStatus);
+      Alert.alert('Não foi possível atualizar', 'Tente novamente em instantes.');
+    } finally {
+      setAtualizandoId(null);
+    }
   }
 
   function confirmarCancelamento(item: Agendamento) {
     Alert.alert('Cancelar atendimento', `Cancelar o horário de ${item.cliente} às ${item.horario}?`, [
       { text: 'Voltar', style: 'cancel' },
-      { text: 'Cancelar atendimento', style: 'destructive', onPress: () => alterarStatus(item.id, 'cancelado') },
+      {
+        text: 'Cancelar atendimento',
+        style: 'destructive',
+        onPress: () => alterarStatus(item.id, 'cancelado'),
+      },
     ]);
   }
 
-  function sair() {
-    // Ajuste a rota se a tela de login tiver outro caminho.
-    router.replace('/');
+  async function sair() {
+    try {
+      await sairDaConta();
+      router.replace('/login-barbeiro');
+    } catch (erroSaida) {
+      console.error('Não foi possível encerrar a sessão do barbeiro:', erroSaida);
+      Alert.alert('Não foi possível sair', 'Tente novamente em instantes.');
+    }
   }
 
   return (
@@ -171,11 +229,20 @@ export default function TelaBarbeiro() {
           </View>
         }
         ListEmptyComponent={
-          <Text style={estilos.vazio}>Nenhum atendimento nesta lista. Troque o filtro para ver os demais.</Text>
+          carregando ? (
+            <ActivityIndicator size="large" color={cores.texto} />
+          ) : erro ? (
+            <Text style={estilos.vazio}>{erro}</Text>
+          ) : (
+            <Text style={estilos.vazio}>
+              Nenhum atendimento nesta lista. Troque o filtro para ver os demais.
+            </Text>
+          )
         }
         renderItem={({ item }) => (
           <CartaoAgendamento
             item={item}
+            desabilitado={atualizandoId === item.id}
             onConcluir={() => alterarStatus(item.id, 'concluido')}
             onCancelar={() => confirmarCancelamento(item)}
           />
@@ -192,10 +259,12 @@ function CartaoAgendamento({
   item,
   onConcluir,
   onCancelar,
+  desabilitado,
 }: {
   item: Agendamento;
   onConcluir: () => void;
   onCancelar: () => void;
+  desabilitado: boolean;
 }) {
   const pendente = item.status === 'pendente';
   const apagado = item.status === 'cancelado';
@@ -219,11 +288,23 @@ function CartaoAgendamento({
 
       {pendente && (
         <View style={estilos.acoes}>
-          <Pressable onPress={onCancelar} style={estilos.botaoContorno} accessibilityRole="button">
+          <Pressable
+            onPress={onCancelar}
+            style={estilos.botaoContorno}
+            accessibilityRole="button"
+            disabled={desabilitado}
+          >
             <Text style={estilos.botaoContornoTexto}>Cancelar</Text>
           </Pressable>
-          <Pressable onPress={onConcluir} style={estilos.botaoVinho} accessibilityRole="button">
-            <Text style={estilos.botaoVinhoTexto}>Concluir</Text>
+          <Pressable
+            onPress={onConcluir}
+            style={estilos.botaoVinho}
+            accessibilityRole="button"
+            disabled={desabilitado}
+          >
+            <Text style={estilos.botaoVinhoTexto}>
+              {desabilitado ? 'Salvando...' : 'Concluir'}
+            </Text>
           </Pressable>
         </View>
       )}

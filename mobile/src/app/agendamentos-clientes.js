@@ -3,5 +3,9 @@ import AgendamentosClientesScreen from '../screens/AgendamentosClientesScreen';
 
 export default function AgendamentosClientes() {
   const router = useRouter();
-  return <AgendamentosClientesScreen onVoltar={() => router.back()} />;
+  return (
+    <AgendamentosClientesScreen
+      onVoltar={() => router.replace('/painel-barbeiro')}
+    />
+  );
 }

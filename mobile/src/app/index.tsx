@@ -44,7 +44,9 @@ export default function Index() {
   return (
     <LoginScreen
       onCadastro={() => router.push('/cadastro')}
-      onEntrar={() => router.replace('/inicial')}
+      onEntrar={(perfil) =>
+        router.replace(perfil.tipo === 'barbeiro' ? '/painel-barbeiro' : '/inicial')
+      }
       onLoginBarbeiro={() => router.push('/login-barbeiro')}
     />
   );

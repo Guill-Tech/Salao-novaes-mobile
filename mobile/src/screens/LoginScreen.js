@@ -15,7 +15,13 @@ import Input from '../components/Input';
 import { colors, fonts, spacing } from '../theme';
 import { entrarNoApp, mensagemDeErroLogin } from '../services/autenticacao';
 
-// onCadastro e onLoginBarbeiro serão ligados à navegação depois.
+/**
+ * @param {{
+ *   onCadastro?: () => void,
+ *   onLoginBarbeiro?: () => void,
+ *   onEntrar?: (perfil: { tipo: string }) => void,
+ * }} props
+ */
 export default function LoginScreen({
   onCadastro = () => {},
   onLoginBarbeiro = () => {},
@@ -118,7 +124,7 @@ const styles = StyleSheet.create({
   logo: {
     width: 140,
     height: 140,
-    marginbottom: spacing.x1,
+    marginBottom: spacing.xl,
   },
   form: { width: '100%', alignItems: 'center', marginBottom: spacing.xl },
   entrar: { marginTop: spacing.md },
