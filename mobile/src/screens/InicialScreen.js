@@ -61,7 +61,7 @@ export default function InicialScreen({
                     <Text style={styles.botaoCancelarTexto}>Cancelar</Text>
                   </TouchableOpacity>
                 ) : (
-                  <Text style={styles.avisoCancelar}>Cancelamento só até 24 h antes</Text>
+                  <Text style={styles.avisoCancelar}>Cancelamento indisponível após o início</Text>
                 )}
               </View>
             ))

@@ -82,8 +82,8 @@ export default function Inicial() {
               await cancelarAgendamento(item.original);
             } catch (erro) {
               console.log('ERRO CANCELAR:', erro.code, erro.message);
-              if (erro.message === 'PRAZO_CANCELAMENTO') {
-                Alert.alert('Prazo encerrado', 'O cancelamento só é possível com pelo menos 24 horas de antecedência.');
+              if (erro.message === 'AGENDAMENTO_INICIADO') {
+                Alert.alert('Atendimento iniciado', 'Não é possível cancelar um atendimento que já começou.');
               } else {
                 Alert.alert('Não foi possível cancelar', 'Tente novamente em instantes.');
               }

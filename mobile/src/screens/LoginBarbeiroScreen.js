@@ -2,14 +2,16 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   Image,
   TouchableOpacity,
   StyleSheet,
   KeyboardAvoidingView,
+  ScrollView,
   Platform,
 } from 'react-native';
-import { cores } from '../theme/barbeiro';
+import Input from '../components/Input';
+import Button from '../components/Button';
+import { colors, spacing } from '../theme';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../services/firebase';
@@ -63,96 +65,89 @@ try {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <Image
-        source={require('../../assets/images/LOGO.png')}
-        style={styles.logo}
-        resizeMode="cover"
-      />
-      <Text style={styles.logoTexto}>Barbeiro</Text>
-
-      <View style={styles.form}>
-        <Text style={styles.label}>E-mail :</Text>
-        <TextInput
-          style={styles.input}
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
+      <ScrollView
+        contentContainerStyle={styles.conteudo}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Image
+          source={require('../../assets/images/LOGO.png')}
+          style={styles.logo}
+          resizeMode="contain"
         />
-        {!!erroEmail && <Text style={styles.erro}>{erroEmail}</Text>}
+        <Text style={styles.titulo}>Barbeiro</Text>
 
-        <Text style={styles.label}>Senha :</Text>
-        <TextInput
-          style={styles.input}
-          value={senha}
-          onChangeText={setSenha}
-          secureTextEntry
+        <View style={styles.form}>
+          <Input
+            label="E-mail :"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoComplete="email"
+            error={erroEmail}
+          />
+          <Input
+            label="Senha :"
+            value={senha}
+            onChangeText={setSenha}
+            secureTextEntry
+            autoComplete="current-password"
+            error={erroSenha}
+          />
+        </View>
+
+        {!!erroGeral && <Text style={styles.erroGeral}>{erroGeral}</Text>}
+        <Button
+          title={carregando ? 'Entrando...' : 'Entrar'}
+          onPress={handleEntrar}
+          style={styles.botaoEntrar}
         />
-        {!!erroSenha && <Text style={styles.erro}>{erroSenha}</Text>}
-      </View>
 
-{!!erroGeral && <Text style={styles.erroGeral}>{erroGeral}</Text>}
-<TouchableOpacity
-  style={[styles.botao, carregando && { opacity: 0.5 }]}
-  onPress={handleEntrar}
-  disabled={carregando}
->
-  <Text style={styles.botaoTexto}>{carregando ? 'Entrando...' : 'Entrar'}</Text>
-</TouchableOpacity>
-
-      <TouchableOpacity onPress={onCadastro}>
-        <Text style={styles.link}>Cadastre-se aqui</Text>
-      </TouchableOpacity>
+        <TouchableOpacity onPress={onCadastro}>
+          <Text style={styles.link}>Cadastre-se aqui</Text>
+        </TouchableOpacity>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  erroGeral: { color: cores.erro, fontSize: 12, marginTop: 20, textAlign: 'center', width: '70%' },
   container: {
     flex: 1,
-    backgroundColor: cores.fundoEscuro,
-    alignItems: 'center',
-    paddingTop: 70,
+    backgroundColor: colors.background,
   },
-  logo: {
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    backgroundColor: '#F2EDE0',
+  conteudo: {
+    flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 60,
+    padding: spacing.lg,
   },
-  logoTexto: {
-    fontSize: 40,
+  logo: {
+    width: 140,
+    height: 140,
+    marginBottom: spacing.md,
+  },
+  titulo: {
+    color: colors.text,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: cores.preto,
+    marginBottom: spacing.xl,
   },
-  form: { width: '70%' },
-  label: { color: cores.branco, fontSize: 14, marginTop: 10 },
-  input: {
-    backgroundColor: cores.cinzaBloco,
-    height: 38,
-    marginTop: 4,
-    paddingHorizontal: 8,
-    color: cores.branco,
+  form: {
+    width: '100%',
+    alignItems: 'center',
   },
-  erro: { color: cores.erro, fontSize: 11, marginTop: 2 },
-  botao: {
-    marginTop: 40,
-    backgroundColor: cores.vinho,
-    borderWidth: 1,
-    borderColor: cores.vinhoBorda,
-    borderRadius: 25,
-    paddingVertical: 10,
-    paddingHorizontal: 40,
-  },
-  botaoTexto: { color: cores.branco, fontSize: 20 },
-  link: {
-    color: cores.link,
+  erroGeral: {
+    color: colors.error,
     fontSize: 12,
+    marginBottom: spacing.md,
+    textAlign: 'center',
+    width: '100%',
+  },
+  botaoEntrar: { marginTop: spacing.md },
+  link: {
+    color: '#6EA8FF',
+    fontSize: 13,
     textDecorationLine: 'underline',
-    marginTop: 40,
+    marginTop: spacing.md,
   },
 });
